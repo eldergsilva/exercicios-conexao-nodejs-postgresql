@@ -13,4 +13,5 @@ CREATE TABLE livros (
     genero TEXT,                              
     editora TEXT,
     data_publicacao DATE,                     
-    id_autor INTEGER REFERENCES autores(id) 
+    id_autor INTEGER REFERENCES autores(id)   
+    );  
