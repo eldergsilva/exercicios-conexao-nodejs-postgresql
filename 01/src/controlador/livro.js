@@ -1,11 +1,29 @@
 const pool = require('../db');
-const listarLivros = async (req, res) => {      
-    const resultado = await pool.query('SELECT * FROM livros');
-    return res.status(200).json(resultado.rows);
+
+const listarLivros = async (req, res) => { 
+    try {
+        const resultado = await pool.query(`select 
+            livros.id as id ,
+            livros.nome as nome,
+            livros.genero as genero,
+            livros.editora as editora,
+            livros.data_publicacao as data_publicacao,
+            autores.id as autores_id,
+            autores.nome as nome_au,
+            autores.idade as autores_idade
+            from livros join  autores on  livros.id_autor = autores.id`);   
+        
+        
+           
+        return res.status(200).json(resultado.rows);
+    } catch (erro) {
+        console.error(erro);
+        return res.status(500).json({ mensagem: 'Erro ao listar livros' });
+    }
 }
 
 const cadastrarLivro = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params;  
     const { nome, genero, editora, data_publicacao } = req.body;
 
     if (!nome) {
@@ -13,32 +31,31 @@ const cadastrarLivro = async (req, res) => {
     }
 
     try {
-        const autor = await pool.query('SELECT * FROM autores WHERE id = $1', [id]);
+        const { rowCount, rows } = await pool.query('SELECT * FROM autores WHERE id = $1', [id]);
 
-        if (autor.rows.length === 0) {
-            return res.status(404).json({ mensagem: 'Autor não encontrado' });
-        }
+        if (rowCount === 0) {
+            return res.status(404).json({ mensagem: 'Autor não existe!' });
+        } 
 
-        const cadastrar = await pool.query(
-            'INSERT INTO livros (nome, genero, editora, data_publicacao, id_autor) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [nome, genero, editora, data_publicacao, id]
-        );
+        const autor = rows[0];
 
-        return res.status(201).json(cadastrar.rows[0]);
+        
+        const query = `
+            INSERT INTO livros (id_autor, nome, genero, editora, data_publicacao) 
+            VALUES ($1, $2, $3, $4, $5) 
+            RETURNING *
+        `;
+        
+        const livro = await pool.query(query, [autor.id, nome, genero, editora, data_publicacao]);       
+
+        return res.status(201).json(livro.rows[0]);
     } catch (erro) {
+        console.error(erro); 
         return res.status(500).json({ mensagem: 'Erro ao cadastrar livro' });
     }
-}   
-
-
-
-
+} 
 
 module.exports = {
     listarLivros,   
     cadastrarLivro
 }
-
-
-
-
