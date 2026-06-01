@@ -2,20 +2,33 @@ const pool = require('../db');
 
 const listarLivros = async (req, res) => { 
     try {
-        const resultado = await pool.query(`select 
+        const query =`select 
             livros.id as id ,
             livros.nome as nome,
             livros.genero as genero,
             livros.editora as editora,
             livros.data_publicacao as data_publicacao,
             autores.id as autores_id,
-            autores.nome as nome_au,
+            autores.nome as nome_autores,
             autores.idade as autores_idade
-            from livros join  autores on  livros.id_autor = autores.id`);   
-        
-        
-           
-        return res.status(200).json(resultado.rows);
+            from livros left join  autores on  livros.id_autor = autores.id`
+            
+            const {rows} = await pool.query(query);
+
+            const  livros = rows.map(livro => {
+            const {autores_id, nome_autores, autores_idade, ...dadosLivro} = livro
+            return {
+
+                ...dadosLivro,
+                autor: {
+                    id: autores_id,        
+                    nome: nome_autores,
+                    idade: autores_idade
+                }            
+            }
+        })  
+
+        return res.status(200).json(livros);
     } catch (erro) {
         console.error(erro);
         return res.status(500).json({ mensagem: 'Erro ao listar livros' });
