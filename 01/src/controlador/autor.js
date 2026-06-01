@@ -11,7 +11,7 @@ const cadastrarAutor = async (req, res) => {
         return res.status(400).json({ mensagem: 'Nome e idade são obrigatórios' });
     }     
     try {
-    const cadastrar = await pool.query('INSERT INTO autores (nome, idade) VALUES ($1, $2)', [nome, idade]);
+    const cadastrar = await pool.query('INSERT INTO autores (nome, idade) VALUES ($1, $2) returning *', [nome, idade]);
      return res.status(201).json(cadastrar.rows[0]);
 
     } catch (erro) {
@@ -23,7 +23,7 @@ const buscarAutorPorId = async (req, res) => {
 
     try {
         
-      const resultado = await pool.query(`
+        const resultado = await pool.query(`
             SELECT 
                 autores.id AS autor_id, 
                 autores.nome AS autor_nome, 
@@ -37,16 +37,42 @@ const buscarAutorPorId = async (req, res) => {
             LEFT JOIN livros ON autores.id = livros.id_autor
             WHERE autores.id = $1;
         `, [id]);
-      
 
-        if (resultado.rows.length === 0) {
-            return res.status(404).json({ mensagem: 'Autor não encontrado' });
-        }
-    
         
-        return res.status(200).json(resultado.rows[0]);
+        if (resultado.rows.length === 0) {
+            return res.status(404).json({ mensagem: "autor não encontrado" });
+        }
+
+        const primeiroRegistro = resultado.rows[0];
+        
+        
+        const autorFormatado = {
+            id: primeiroRegistro.autor_id,
+            nome: primeiroRegistro.autor_nome,
+            idade: primeiroRegistro.idade,
+            livros: []
+        };
+
+        
+        resultado.rows.forEach(linha => {
+            if (linha.livro_id) {
+                autorFormatado.livros.push({
+                    id: linha.livro_id, 
+                    id: linha.livro_id,
+                    nome: linha.livro_nome,
+                    genero: linha.genero,
+                    editora: linha.editora,
+                    
+                    data_publicacao: linha.data_publicacao.toISOString().split('T')[0]
+                });
+            }
+        });
+
+        return res.status(200).json(autorFormatado);
+
     } catch (erro) {
-        return res.status(500).json({ mensagem: 'Erro ao buscar autor' });
+        console.error(erro);
+        return res.status(500).json({ mensagem: "Erro interno do servidor" });
     }
 }   
 

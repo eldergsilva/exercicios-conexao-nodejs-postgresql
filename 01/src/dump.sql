@@ -15,3 +15,5 @@ CREATE TABLE livros (
     data_publicacao DATE,                     
     id_autor INTEGER REFERENCES autores(id)   
     );  
+
+ 
