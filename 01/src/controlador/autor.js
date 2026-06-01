@@ -20,13 +20,12 @@ const cadastrarAutor = async (req, res) => {
 }
 const buscarAutorPorId = async (req, res) => {
     const { id } = req.params;
-
     try {
         
-        const resultado = await pool.query(`
+        const query = `
             SELECT 
-                autores.id AS autor_id, 
-                autores.nome AS autor_nome, 
+                autores.id AS id, 
+                autores.nome AS nome, 
                 autores.idade, 
                 livros.id AS livro_id,
                 livros.nome AS livro_nome,
@@ -36,39 +35,32 @@ const buscarAutorPorId = async (req, res) => {
             FROM autores
             LEFT JOIN livros ON autores.id = livros.id_autor
             WHERE autores.id = $1;
-        `, [id]);
+        `;
 
-        
-        if (resultado.rows.length === 0) {
+        const {rowCount, rows} = await pool.query(query,[id]);
+
+        if (rowCount === 0) {
             return res.status(404).json({ mensagem: "autor não encontrado" });
-        }
-
-        const primeiroRegistro = resultado.rows[0];
+        }              
         
-        
-        const autorFormatado = {
-            id: primeiroRegistro.autor_id,
-            nome: primeiroRegistro.autor_nome,
-            idade: primeiroRegistro.idade,
-            livros: []
-        };
-
-        
-        resultado.rows.forEach(linha => {
-            if (linha.livro_id) {
-                autorFormatado.livros.push({
-                    id: linha.livro_id, 
-                    id: linha.livro_id,
-                    nome: linha.livro_nome,
-                    genero: linha.genero,
-                    editora: linha.editora,
-                    
-                    data_publicacao: linha.data_publicacao.toISOString().split('T')[0]
-                });
-            }
+        const livros = rows.map(livro => {
+           return {
+            id: livro.livro_id,
+            nome: livro.livro_nome,
+            genero: livro.genero,
+            editora: livro.editora,
+            data_publicacao: livro.data_publicacao.toISOString().split('T')[0]
+           }
         });
 
-        return res.status(200).json(autorFormatado);
+        const autor = {
+            id:rows[0].id,
+            nome: rows[0].nome,
+            idade: rows[0].idade,
+            livros
+        };
+
+        return res.status(200).json(autor);
 
     } catch (erro) {
         console.error(erro);
